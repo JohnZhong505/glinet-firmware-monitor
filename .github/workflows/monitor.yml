@@ -1,0 +1,37 @@
+name: Firmware Monitor
+
+on:
+  schedule:
+    - cron: '0 1,13 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-monitor:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: checkout
+      uses: actions/checkout@v4
+
+    - name: setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: install deps
+      run: pip install requests
+
+    - name: run monitor
+      env:
+        DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+      run: python monitor.py
+
+    - name: commit version record
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
+        git add versions.json
+        git commit -m "update versions" || echo "no change"
+        git push
