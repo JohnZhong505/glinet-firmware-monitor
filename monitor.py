@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 
 WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 
+# === 配置 ===
+TEST_MODE = True  # True = 验证模式，立即抓取并推送 Release Note；False = 正常监控
 URLS = [
     "https://dl.gl-inet.com/router/mt3000/beta",
     "https://dl.gl-inet.com/router/mt3000/stable",
@@ -17,10 +19,10 @@ URLS = [
     "https://dl.gl-inet.com/router/axt1800/beta",
     "https://dl.gl-inet.com/router/axt1800/stable"
 ]
-
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 VERSIONS_FILE = "versions.json"
 
+# === 工具函数 ===
 def load_versions():
     if not os.path.exists(VERSIONS_FILE):
         return {}
@@ -66,8 +68,12 @@ def get_release_note(url, version):
 
 def send_dingtalk(msg):
     data = {"msgtype": "markdown", "markdown": {"title": "GL.iNet 固件更新", "text": msg}}
-    requests.post(WEBHOOK,json=data)
+    try:
+        requests.post(WEBHOOK,json=data,timeout=10)
+    except Exception as e:
+        print(f"发送钉钉消息失败: {e}")
 
+# === 主逻辑 ===
 def main():
     versions = load_versions()
     new_updates = []
@@ -81,10 +87,17 @@ def main():
         if not latest:
             continue
 
+        note = get_release_note(url, latest)
+
+        if TEST_MODE:
+            # 验证模式：直接推送每个型号 Release Note
+            new_updates.append((model, channel, None, latest, note))
+            continue
+
+        # 正常监控模式
         key = f"{model}_{channel}"
         old = versions.get(key)
         if old != latest:
-            note = get_release_note(url, latest)
             new_updates.append((model, channel, old, latest, note))
             versions[key] = latest
 
@@ -93,7 +106,9 @@ def main():
     if new_updates:
         msg = "### GL.iNet 固件更新\n\n"
         for model, channel, old, new, note in new_updates:
-            msg += f"**设备**: {model}\n**渠道**: {channel}\n**旧版本**: {old}\n**新版本**: {new}\n**Release Note**:\n{note}\n\n"
+            old_text = old if old else "无"
+            new_text = new if new else "无"
+            msg += f"**设备**: {model}\n**渠道**: {channel}\n**旧版本**: {old_text}\n**新版本**: {new_text}\n**Release Note**:\n{note}\n\n"
         send_dingtalk(msg)
     else:
         now = datetime.now()
