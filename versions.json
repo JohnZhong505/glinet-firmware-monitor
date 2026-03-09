@@ -1,9 +1,1 @@
-def load_versions():
-    if not os.path.exists("versions.json"):
-        return {}
-    with open("versions.json") as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            data = {}
-    return data
+{}

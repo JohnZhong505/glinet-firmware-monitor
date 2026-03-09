@@ -38,7 +38,11 @@ def load_versions():
     if not os.path.exists("versions.json"):
         return {}
     with open("versions.json") as f:
-        return json.load(f)
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            data = {}
+    return data
 
 def save_versions(data):
     with open("versions.json","w") as f:
