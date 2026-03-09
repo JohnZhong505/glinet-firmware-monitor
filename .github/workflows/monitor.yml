@@ -25,4 +25,4 @@ jobs:
     - name: Run monitor
       env:
         DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
-      run: python monitor.py
+      run: python test.py
